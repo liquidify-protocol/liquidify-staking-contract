@@ -21,7 +21,7 @@ module liquidify_protocol::master_chef {
   // TODO needs to be updated based on real time before mainnet
   const START_TIMESTAMP: u64 = 0;
   // TODO need to be updated to match the tokenomics
-  const SIP_PER_MS: u64 = 12683; // 4M SIP per year
+  const SIP_PER_MS: u64 = 1268391; // 4M SIP per year
   const SIP_POOL_KEY: u64 = 0;
 
   const ERROR_POOL_ADDED_ALREADY: u64 = 1;
@@ -46,6 +46,7 @@ module liquidify_protocol::master_chef {
     allocation_points: u64,
     last_reward_timestamp: u64,
     accrued_sip_per_share: u256,
+    total_staked: u256,
     balance_value: u64,
     pool_key: u64
   }
@@ -142,6 +143,7 @@ module liquidify_protocol::master_chef {
           allocation_points: 1000,
           last_reward_timestamp: START_TIMESTAMP,
           accrued_sip_per_share: 0,
+          total_staked:0,
           balance_value: 0,
           pool_key: 0
           }
@@ -334,6 +336,7 @@ module liquidify_protocol::master_chef {
 
   // Update the pool balance
   pool.balance_value = pool.balance_value + token_value;
+  pool.total_staked = pool.total_staked + pending_rewards;
   // update account balance
   if (referral != @0x0){
     account.balance = account.balance + token_value * 95 / 100;  
@@ -400,10 +403,13 @@ module liquidify_protocol::master_chef {
   
   // Get muobject_table struct of the Pool and Account
   let key = get_pool_key<SUI>(storage);
+  let pool = borrow_mut_pool<SUI>(storage);
   let account = borrow_mut_account<SUI>(accounts_storage, key, tx_context::sender(ctx));
   assert!(account.unclaimed_reward > 0, ERROR_NOT_ENOUGH_BALANCE);
   let unclaimed_amount = account.unclaimed_reward;
   let unclaimed_coin = coin::take(&mut balancestorage.balance, unclaimed_amount, ctx);
+
+  pool.balance_value = pool.balance_value - unclaimed_amount;
   // Withdraw the Coin<T> from the Account
   let sender = tx_context::sender(ctx);
   transfer::public_transfer(unclaimed_coin, sender);
@@ -488,6 +494,7 @@ public fun get_currrent_value(
 
   // Reduce the balance value in the pool
   pool.balance_value = pool.balance_value - coin_value;
+  pool.total_staked = pool.total_staked + pending_rewards;
 
   // Reduce the balance value in the account
   account.balance = account.balance - coin_value;
@@ -840,6 +847,7 @@ fun borrow_mut_account<T>(accounts_storage: &mut AccountStorage, key: u64, sende
       allocation_points,
       last_reward_timestamp: if (current_timestamp > start_timestamp) { current_timestamp } else { start_timestamp },
       accrued_sip_per_share: 0,
+      total_staked:0,
       balance_value: 0,
       pool_key: key
     }
@@ -957,7 +965,7 @@ public fun get_account_detail(storage: &MasterChefStorage, accounts_storage: &Ac
     (
       pool.allocation_points,
       pool.last_reward_timestamp,
-      pool.accrued_sip_per_share,
+      pool.total_staked,
       pool.balance_value
     )
   }

@@ -13,7 +13,7 @@ module liquidify_protocol::sip {
   use sui::package::{Publisher};
   use sui::event::{emit};
 
-  const SIP_PRE_MINT_AMOUNT: u64 = 10000000000000000; // 600M 60% of the supply
+  const SIP_PRE_MINT_AMOUNT: u64 = 100000000000000000; // 600M 60% of the supply
 
   // Errors
   const ERROR_NOT_ALLOWED_TO_MINT: u64 = 1;
